@@ -114,11 +114,15 @@ function endDrag(e) {
   if(pieceElements[d.id].hasPointerCapture(e.pointerId))pieceElements[d.id].releasePointerCapture(e.pointerId);
 }
 function cancelDrag() { if(!drag)return;const id=drag.id;drag=null;pieceElements[id].classList.remove('dragging');positionPiece(id); }
-function showHint() {
+function useHint(applyMove) {
   if (state[0] === TARGET) return;
   const move = solve(state)?.[0];
   if (!move) return;
   const {id, dx, dy, distance} = move;
+  if (applyMove) {
+    commit(id, dx, dy, distance);
+    return;
+  }
   const direction = dx ? (dx > 0 ? 'à droite' : 'à gauche') : (dy > 0 ? 'vers le bas' : 'vers le haut');
   tell(`Déplace ${SHAPES[id].name} de ${distance} case${distance > 1 ? 's' : ''} ${direction}.`, true);
 }
@@ -133,8 +137,9 @@ document.addEventListener('keydown',e=>{
     return;
   }
   if(drag)return;
-  if (e.key.toLowerCase() === 'i' && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && !e.repeat) {
-    showHint();
+  const key = e.key.toLowerCase();
+  if ((key === 'i' || key === 'o') && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && !e.repeat) {
+    useHint(key === 'o');
     return;
   }
   const keyDir={ArrowUp:0,ArrowRight:1,ArrowDown:2,ArrowLeft:3}[e.key];
