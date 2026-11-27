@@ -32,14 +32,24 @@
         <div class="game-bottomline"><span><span class="drag-dot">↔</span> Fais glisser les blocs</span></div>
       </div>
       <aside class="side-panel">
-        <div class="score-row"><div><span class="metric-label">COUPS</span><strong id="moves">00</strong></div><div><span class="metric-label">RECORD</span><strong id="best" class="best-score">—</strong></div></div>
+        <div class="score-row"><div><span class="metric-label">COUPS</span><strong id="moves">00</strong></div><div><span class="metric-label">RECORD</span><strong id="best" class="best-score">—</strong></div><div><span class="metric-label" id="timer-label">TEMPS</span><strong id="timer" role="timer" aria-labelledby="timer-label">00:00</strong></div></div>
         <div class="action-row"><button id="undo" class="action-button" disabled><svg><use href="#i-undo"/></svg>Annuler</button><button id="reset" class="action-button"><svg><use href="#i-reset"/></svg>Recommencer</button></div>
         <div class="message" id="message" role="status" aria-live="polite"></div>
         <div class="keyboard-controls"><span id="selected-label">Sélectionne un bloc pour le déplacer.</span><div class="direction-buttons" aria-label="Déplacer le bloc sélectionné"><button data-dir="3" aria-label="Déplacer à gauche" disabled>←</button><button data-dir="0" aria-label="Déplacer vers le haut" disabled>↑</button><button data-dir="2" aria-label="Déplacer vers le bas" disabled>↓</button><button data-dir="1" aria-label="Déplacer à droite" disabled>→</button></div><span class="keyboard-note">Le clavier fonctionne aussi.</span></div>
+        <button type="button" id="share" class="action-button">Partager</button>
+        <details id="ranking"><summary>Classement</summary>
+          <p>Top 10 par coups, puis par temps.</p>
+          <ol id="scores"></ol><p id="ranking-status" role="status"></p>
+        </details>
+        <form id="publish" hidden>
+          <label for="nickname">Pseudo public</label>
+          <input id="nickname" required maxlength="24" autocomplete="nickname">
+          <button class="action-button">Publier mon score</button>
+        </form>
       </aside>
     </section>
   </main>
-  <div class="win-overlay" id="win" hidden role="dialog" aria-modal="true" aria-labelledby="win-title" tabindex="-1"><div class="win-card"><div class="win-illustration"><svg><use href="#i-recycle"/></svg><span>✦</span></div><span class="section-number">MISSION ACCOMPLIE</span><h2 id="win-title">Place nette !</h2><p id="win-message"></p><p class="new-record" id="new-record" hidden>Nouveau record. Bien joué !</p><button id="replay" class="replay-button">On remet ça ?<svg><use href="#i-arrow"/></svg></button><button id="view-board" class="view-board">Voir le plateau</button></div></div>
-  <script type="module" src="./game.js"></script>
+  <div class="win-overlay" id="win" hidden role="dialog" aria-modal="true" aria-labelledby="win-title" tabindex="-1"><div class="win-card"><div class="win-illustration"><svg><use href="#i-recycle"/></svg><span>✦</span></div><span class="section-number">MISSION ACCOMPLIE</span><h2 id="win-title">Réussi !</h2><p id="win-message"></p><p class="new-record" id="new-record" hidden>Nouveau record. Bien joué !</p><span id="share-status" role="status"></span><button id="share-win" class="action-button">Partager mon résultat</button><button id="publish-win" class="action-button">Accéder au classement</button><button id="replay" class="replay-button">On remet ça ?<svg><use href="#i-arrow"/></svg></button><button id="view-board" class="view-board">Voir le plateau</button></div></div>
+  <script type="module" src="./game.js?v=bd02fc72"></script>
 </body>
 </html>

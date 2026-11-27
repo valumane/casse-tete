@@ -2,6 +2,15 @@
 
 Un petit casse-tête à blocs coulissants, recréé à partir d’un puzzle de **Professeur Layton**.
 
+## Les deux versions
+
+| Version | Jouer | Code source |
+| --- | --- | --- |
+| Jeu du portfolio avec chronomètre, partage et classement SQLite | [Jouer sur valu66.fr](https://www.valu66.fr/casse-tete/) | [Branche `main`](https://github.com/valumane/casse-tete/tree/main) |
+| Jeu statique d’origine avec record local | [Jouer sur GitHub Pages](https://valumane.github.io/casse-tete/) | [Branche `static`](https://github.com/valumane/casse-tete/tree/static) |
+
+GitHub Pages publie la racine de la branche `static`.
+
 ## Pourquoi ce projet ?
 
 Un ami jouait à Professeur Layton et galérait sur ce casse-tête. J’ai donc décidé de le recréer dans une version plus simple, jouable directement dans un navigateur, pour pouvoir chercher la solution plus facilement.
@@ -23,7 +32,7 @@ Le jeu compte les coups et conserve la partie ainsi que le meilleur score dans l
 
 ## Lancer le projet
 
-Le jeu est fait en **HTML, CSS et JavaScript**, sans dépendance ni compilation.
+L’interface est en **HTML, CSS et JavaScript**, sans dépendance ni compilation.
 
 Depuis le dossier du projet :
 
@@ -33,7 +42,7 @@ python3 -m http.server 8000
 
 Ouvre ensuite [localhost:8000](http://localhost:8000) dans ton navigateur. Un serveur local est nécessaire pour charger les modules JavaScript.
 
-Le projet peut aussi être hébergé directement sur GitHub Pages.
+Pour le classement de la branche `main`, lance le service avec `python3 server/scores.py`. Sur le serveur du portfolio, nginx transmet les requêtes de `/casse-tete/api/scores` au service Python sur le port local 18766. Celui-ci vérifie les déplacements et enregistre les scores dans une base SQLite en dehors du répertoire web.
 
 ## Fichiers
 

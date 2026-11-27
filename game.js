@@ -4,7 +4,10 @@ const $ = s => document.querySelector(s);
 const board = $('#board'), pieceLayer = $('#pieces'), win = $('#win');
 const storageKey = 'tri-malin-v2';
 let state = INITIAL.slice(), history = [], best = null, selected = -1, drag = null;
+let runId = null;
 let winShown = false;
+let startedAt = null, finishedAt = null;
+const timer = $('#timer');
 try {
   const saved = JSON.parse(localStorage.getItem(storageKey));
   if (saved) {
@@ -22,12 +25,19 @@ try {
         }
         previous=h;
       }
-      if (valid) { state = saved.state.slice(); history = saved.history.map(s => s.slice()); }
+      if (valid) {
+        runId = saved.runId ?? null;
+        state = saved.state.slice();
+        history = saved.history.map(s => s.slice());
+        if (Number.isSafeInteger(saved.startedAt)) startedAt = saved.startedAt;
+        else if (history.length && state[0] !== TARGET) startedAt = Date.now();
+        if (state[0] === TARGET && startedAt !== null) finishedAt = saved.finishedAt ?? Date.now();
+      }
     }
   }
 } catch {}
 
-function save() { try { localStorage.setItem(storageKey, JSON.stringify({state,history,best})); } catch {} }
+function save() { try { localStorage.setItem(storageKey, JSON.stringify({state,history,best,startedAt,finishedAt,runId})); } catch {} }
 function tell(text, active = false) { $('#message').textContent = text; $('#message').classList.toggle('active', active); }
 
 $('#floor').innerHTML = '<svg viewBox="0 0 600 800" preserveAspectRatio="none" aria-hidden="true"><path d="M7 0H193Q200 0 200 7V200H593Q600 200 600 207V293Q600 300 593 300H400V793Q400 800 393 800H207Q200 800 200 793V600H7Q0 600 0 593V7Q0 0 7 0Z" fill="#dfe2d1" stroke="#c6cdb8" stroke-width="2"/></svg>';
@@ -65,7 +75,14 @@ function positionPiece(id) {
   el.style.left=`calc(${p%6/6*100}% + 3px)`;el.style.top=`calc(${Math.floor(p/6)/8*100}% + 2px)`;
   el.style.width=`calc(${shape.w/6*100}% - 6px)`;el.style.height=`calc(${shape.h/8*100}% - 6px)`;
 }
+function renderTimer() {
+  const seconds = startedAt === null ? 0 : Math.max(0, Math.floor(((finishedAt ?? Date.now()) - startedAt) / 1000));
+  const time = [Math.floor(seconds / 60), seconds % 60].map(n => String(n).padStart(2, '0')).join(':');
+  if (timer.textContent !== time) timer.textContent = time;
+}
 function render() {
+  renderTimer();
+  $('#publish').hidden = state[0] !== TARGET;
   pieceElements.forEach((el,id)=>{positionPiece(id);el.classList.toggle('finished',id===0&&state[0]===TARGET);});
   $('#moves').textContent=String(history.length).padStart(2,'0');
   $('#best').textContent=best===null?'—':String(best).padStart(2,'0');
@@ -77,6 +94,8 @@ function commit(id,dx,dy,distance=1) {
   if(state[0]===TARGET)return false;
   const next=movePiece(state,id,dx,dy,distance);
   if(!next)return false;
+  startedAt ??= Date.now();
+  if (next[0] === TARGET) finishedAt = Date.now();
   history.push(state.slice());state=next;render();save();
   if(state[0]===TARGET)won();else{tell('Bien vu. Continue à ouvrir le passage.');}
   return true;
@@ -136,7 +155,7 @@ document.addEventListener('keydown',e=>{
     }
     return;
   }
-  if(drag)return;
+  if (drag || e.target.closest?.('input, textarea, [contenteditable=true]')) return;
   const key = e.key.toLowerCase();
   if ((key === 'i' || key === 'o') && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && !e.repeat) {
     useHint(key === 'o');
@@ -148,17 +167,27 @@ document.addEventListener('keydown',e=>{
   else if(e.key==='Escape'){select(-1);pieceElements.forEach(el=>el.blur());}
 });
 document.querySelectorAll('[data-dir]').forEach(btn=>btn.addEventListener('click',()=>{if(selected<0||drag)return;const {dx,dy}=DIRECTIONS[Number(btn.dataset.dir)];commit(selected,dx,dy);}));
-function undo(){if(!history.length)return;cancelDrag();state=history.pop();winShown=false;win.hidden=true;document.querySelector('main').inert=false;render();save();tell('Un pas en arrière, une nouvelle idée.');}
+function undo(){if(!history.length)return;cancelDrag();
+  if (finishedAt !== null) {
+    startedAt += Date.now() - finishedAt;
+    finishedAt = null;
+  }
+  startedAt ??= Date.now();
+  state=history.pop();winShown=false;win.hidden=true;document.querySelector('main').inert=false;render();save();tell('Un pas en arrière, une nouvelle idée.');}
 $('#undo').addEventListener('click',undo);
-function reset(){cancelDrag();state=INITIAL.slice();history=[];selected=-1;winShown=false;win.hidden=true;document.querySelector('main').inert=false;render();save();tell('');}
+function reset(){cancelDrag();runId=null;startedAt=null;finishedAt=null;state=INITIAL.slice();history=[];selected=-1;winShown=false;win.hidden=true;document.querySelector('main').inert=false;render();save();tell('');}
 $('#reset').addEventListener('click',reset);
 $('#replay').addEventListener('click',()=>{reset();pieceElements[0].focus({preventScroll:true});});
 
 function won(){
   if(winShown)return;winShown=true;
+  runId = null;save();
+  $('#share-status').textContent = '';
   const record=best===null||history.length<best;
   if(record){best=history.length;$('#best').textContent=String(best).padStart(2,'0');save();}
-  $('#win-message').textContent=`Le bloc rouge est dans la zone verte. Tu as fait place nette en ${history.length} coups.`;
+  const moves = history.length;
+  $('#win-title').textContent = `Réussi en ${moves} coup${moves === 1 ? '' : 's'} !`;
+  $('#win-message').textContent = `Temps : ${timer.textContent}`;
   $('#new-record').hidden=!record;tell('Mission accomplie : le bloc rouge est dans la zone verte !',true);
   setTimeout(()=>{if(state[0]!==TARGET||!winShown)return;win.hidden=false;document.querySelector('main').inert=true;$('#replay').focus({preventScroll:true});confetti();},400);
 }
@@ -170,7 +199,75 @@ function confetti(){
     const c=document.createElement('i');c.className='confetti';c.style.left=`${Math.random()*100}%`;c.style.background=['#d8896c','#e5bd65','#8bbfc0','#8fa97b'][i%4];c.style.animationDelay=`${Math.random()*.5}s`;c.style.setProperty('--drift',`${Math.random()*160-80}px`);document.body.append(c);setTimeout(()=>c.remove(),3200);
   }
 }
+window.setInterval(renderTimer, 1000);
 window.addEventListener('resize',cancelDrag);
 window.addEventListener('blur',cancelDrag);
 render();
 if(state[0]===TARGET){winShown=true;tell('Bravo, le plateau est terminé. Tu peux recommencer pour améliorer ton record.',true);}
+
+const ranking = $('#ranking');
+const rankingStatus = $('#ranking-status');
+let rankingRequest = 0;
+
+async function loadRanking(score) {
+  const request = ++rankingRequest;
+  rankingStatus.textContent = score ? 'Publication…' : 'Chargement…';
+  try {
+    const response = await fetch('./api/scores', score ? {
+      method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(score)
+    } : {cache: 'no-store'});
+    if (!response.ok) throw Error();
+    const rows = await response.json();
+    if (request !== rankingRequest) return;
+    $('#scores').replaceChildren(...rows.map(row => {
+      const item = document.createElement('li');
+      const time = `${Math.floor(row.seconds / 60)} min ${row.seconds % 60} sec`;
+      item.textContent = row.name + ' · ' + row.moves + ' coups · ' + time;
+      return item;
+    }));
+    rankingStatus.textContent = score ? 'Score enregistré.' : rows.length ? '' : 'Le classement est encore vide.';
+  } catch {
+    if (request === rankingRequest) rankingStatus.textContent = 'Classement indisponible. Réessaie dans un instant.';
+  }
+}
+ranking.addEventListener('toggle', () => { if (ranking.open && !$('#publish button').disabled) loadRanking(); });
+$('#publish-win').addEventListener('click', () => {
+  closeWin();
+  ranking.open = true;
+  $('#nickname').focus();
+});
+$('#publish').addEventListener('submit', async event => {
+  event.preventDefault();
+  if (state[0] !== TARGET) return;
+  const name = $('#nickname').value.trim();
+  if (!name) return $('#nickname').focus();
+  runId ??= crypto.randomUUID();
+  save();
+  const moves = history.map((previous, i) => {
+    const next = history[i + 1] ?? state;
+    const id = next.findIndex((p, j) => p !== previous[j]);
+    return [id, next[id]];
+  });
+  ranking.open = true;
+  const button = event.currentTarget.querySelector('button');
+  button.disabled = true;
+  try {
+    await loadRanking({run: runId, name, moves, seconds: Math.max(0, Math.floor((finishedAt - startedAt) / 1000))});
+  } finally { button.disabled = false; }
+});
+async function shareGame() {
+  const url = location.origin + location.pathname;
+  const text = state[0] === TARGET
+    ? `J’ai terminé Tri malin en ${history.length} coups et ${timer.textContent} !`
+    : 'À toi de résoudre Tri malin !';
+  try {
+    if (navigator.share) return await navigator.share({title: 'Tri malin', text, url});
+    await navigator.clipboard.writeText(text + ' ' + url);
+    const status = win.hidden ? $('#message') : $('#share-status');
+    status.textContent = 'Lien de partage copié.';
+  } catch (error) {
+    if (error.name !== 'AbortError') window.prompt('Copie ce message pour partager le jeu.', text + ' ' + url);
+  }
+}
+$('#share').addEventListener('click', shareGame);
+$('#share-win').addEventListener('click', shareGame);
