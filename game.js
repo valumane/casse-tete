@@ -1,4 +1,4 @@
-import {FLOOR, SHAPES, INITIAL, TARGET, DIRECTIONS, isValid, maxTravel, movePiece} from './engine.js';
+import {FLOOR, SHAPES, INITIAL, TARGET, DIRECTIONS, isValid, maxTravel, movePiece, solve} from './engine.js';
 
 const $ = s => document.querySelector(s);
 const board = $('#board'), pieceLayer = $('#pieces'), win = $('#win');
@@ -114,6 +114,14 @@ function endDrag(e) {
   if(pieceElements[d.id].hasPointerCapture(e.pointerId))pieceElements[d.id].releasePointerCapture(e.pointerId);
 }
 function cancelDrag() { if(!drag)return;const id=drag.id;drag=null;pieceElements[id].classList.remove('dragging');positionPiece(id); }
+function showHint() {
+  if (state[0] === TARGET) return;
+  const move = solve(state)?.[0];
+  if (!move) return;
+  const {id, dx, dy, distance} = move;
+  const direction = dx ? (dx > 0 ? 'à droite' : 'à gauche') : (dy > 0 ? 'vers le bas' : 'vers le haut');
+  tell(`Déplace ${SHAPES[id].name} de ${distance} case${distance > 1 ? 's' : ''} ${direction}.`, true);
+}
 document.addEventListener('keydown',e=>{
   if(!win.hidden){
     if(e.key==='Escape'){closeWin();e.preventDefault();}
@@ -125,6 +133,10 @@ document.addEventListener('keydown',e=>{
     return;
   }
   if(drag)return;
+  if (e.key.toLowerCase() === 'i' && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && !e.repeat) {
+    showHint();
+    return;
+  }
   const keyDir={ArrowUp:0,ArrowRight:1,ArrowDown:2,ArrowLeft:3}[e.key];
   if(keyDir!==undefined&&selected>=0){e.preventDefault();const {dx,dy}=DIRECTIONS[keyDir];if(!commit(selected,dx,dy))tell('Le passage est bloqué de ce côté.');}
   else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();undo();}
